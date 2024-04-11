@@ -1,4 +1,4 @@
-import { LIB_VERSION } from '../../../version';
+import { LIB_VERSION } from '../../version';
 import {
   ClientConfigEventType,
   ConfigMessage,

@@ -5,7 +5,6 @@ import { CoinbaseWalletProvider } from './CoinbaseWalletProvider';
 import { ScopedLocalStorage } from './core/storage/ScopedLocalStorage';
 import { ProviderInterface } from './core/type/ProviderInterface';
 import { getFavicon } from './core/util';
-import { Signer } from './sign/SignerInterface';
 import { LIB_VERSION } from './version';
 
 /** Coinbase Wallet SDK Constructor Options */
@@ -46,18 +45,10 @@ export class CoinbaseWalletSDK {
 
   public makeWeb3Provider(): ProviderInterface {
     if (!this.smartWalletOnly) {
-      const extensionProvider = this.walletExtension;
-      const shouldUseExtensionProvider = extensionProvider && !this.walletExtensionSigner;
-
-      if (shouldUseExtensionProvider) {
-        extensionProvider.setAppInfo?.(this.appName, this.appLogoUrl);
-        return extensionProvider;
+      const injectedCoinbaseProvider = this.grabInjectedProvider();
+      if (injectedCoinbaseProvider) {
+        return injectedCoinbaseProvider;
       }
-    }
-
-    const dappBrowser = this.coinbaseBrowser;
-    if (dappBrowser) {
-      return dappBrowser;
     }
 
     return new CoinbaseWalletProvider({
@@ -66,15 +57,6 @@ export class CoinbaseWalletSDK {
       appChainIds: this.chainIds,
       smartWalletOnly: this.smartWalletOnly,
     });
-  }
-
-  public disconnect(): void {
-    const extension = this?.walletExtension;
-    if (extension) {
-      extension.close?.();
-    } else {
-      ScopedLocalStorage.clearAll();
-    }
   }
 
   /**
@@ -87,33 +69,21 @@ export class CoinbaseWalletSDK {
     return walletLogo(type, width);
   }
 
-  private get walletExtension(): LegacyProviderInterface | undefined {
-    return window.coinbaseWalletExtension;
-  }
+  private grabInjectedProvider(): ProviderInterface | undefined {
+    const extension = window.coinbaseWalletExtension;
 
-  private get walletExtensionSigner(): Signer | undefined {
-    return window.coinbaseWalletExtensionSigner;
-  }
+    if (extension) {
+      if (extension?.shouldUseSigner) return undefined;
 
-  private get coinbaseBrowser(): LegacyProviderInterface | undefined {
-    try {
-      // Coinbase DApp browser does not inject into iframes so grab provider from top frame if it exists
-      const ethereum = window.ethereum ?? window.top?.ethereum;
-      if (!ethereum) {
-        return undefined;
-      }
-
-      if ('isCoinbaseBrowser' in ethereum && ethereum.isCoinbaseBrowser) {
-        return ethereum;
-      }
-      return undefined;
-    } catch (e) {
-      return undefined;
+      extension.setAppInfo?.(this.appName, this.appLogoUrl);
+      return extension;
     }
-  }
-}
 
-interface LegacyProviderInterface extends ProviderInterface {
-  setAppInfo?(appName: string, appLogoUrl: string | null): void;
-  close?(): void;
+    const ethereum = window.ethereum ?? window.top?.ethereum;
+    if ('isCoinbaseBrowser' in ethereum && ethereum.isCoinbaseBrowser) {
+      return ethereum;
+    }
+
+    return undefined;
+  }
 }

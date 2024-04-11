@@ -14,6 +14,7 @@ import { areAddressArraysEqual, prepend0x, showDeprecationWarning } from './core
 import { FilterRequestHandler } from './filter/FilterRequestHandler';
 import { StateRequestHandler } from './internalState/StateRequestHandler';
 import { RPCFetchRequestHandler } from './rpcFetch/RPCFetchRequestHandler';
+import { Signer } from './sign/SignerInterface';
 import { SignRequestHandler } from './sign/SignRequestHandler';
 import { AccountsUpdate, ChainUpdate } from './sign/UpdateListenerInterface';
 import { SubscriptionRequestHandler } from './subscription/SubscriptionRequestHandler';
@@ -23,6 +24,9 @@ interface ConstructorOptions {
   appLogoUrl?: string | null;
   appChainIds: number[];
   smartWalletOnly: boolean;
+  signer?: Signer; // optional:
+  // for cbwallet apps to implement signing features using its own UI and stuff
+  // on their provider instance to inject to dapps.
 }
 
 export class CoinbaseWalletProvider extends EventEmitter implements ProviderInterface {
@@ -30,14 +34,6 @@ export class CoinbaseWalletProvider extends EventEmitter implements ProviderInte
   private chain: Chain;
 
   private readonly handlers: RequestHandler[];
-
-  public get chainId() {
-    return this.chain.id;
-  }
-
-  public get isCoinbaseWallet() {
-    return true;
-  }
 
   constructor(options: Readonly<ConstructorOptions>) {
     super();
@@ -47,7 +43,6 @@ export class CoinbaseWalletProvider extends EventEmitter implements ProviderInte
     };
 
     this.handlers = [
-      new StateRequestHandler(),
       new SignRequestHandler({
         ...options,
         updateListener: {
@@ -57,6 +52,7 @@ export class CoinbaseWalletProvider extends EventEmitter implements ProviderInte
           onResetConnection: this.disconnect.bind(this),
         },
       }),
+      new StateRequestHandler(),
       new FilterRequestHandler({
         provider: this,
       }),
@@ -125,5 +121,9 @@ export class CoinbaseWalletProvider extends EventEmitter implements ProviderInte
 
     if (source === 'storage') return;
     this.emit('chainChanged', prepend0x(chain.id.toString(16)));
+  }
+
+  public get isCoinbaseWallet() {
+    return true;
   }
 }

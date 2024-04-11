@@ -69,9 +69,11 @@ export class PopUpCommunicator extends CrossDomainCommunicator {
   }
 
   selectSignerType({
+    selectConnectionType,
     smartWalletOnly,
     isExtensionSignerAvailable,
   }: {
+    selectConnectionType: boolean;
     smartWalletOnly: boolean;
     isExtensionSignerAvailable: boolean;
   }): Promise<SignerType> {
@@ -108,7 +110,11 @@ export class PopUpCommunicator extends CrossDomainCommunicator {
     const top = (window.innerHeight - POPUP_HEIGHT) / 2 + window.screenY;
 
     const urlParams = new URLSearchParams();
-    urlParams.append('opener', encodeURIComponent(window.location.href));
+    urlParams.append({
+      initiateOnboardingFlow: true,
+      smartWalletOnly,
+      isExtensionSignerAvailable,
+    });
 
     if (!this.url) {
       throw standardErrors.rpc.internal('No url provided in PopUpCommunicator');

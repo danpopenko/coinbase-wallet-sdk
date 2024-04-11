@@ -1,5 +1,6 @@
-import { PopUpCommunicator } from './scw/transport/PopUpCommunicator';
 import { SignerConfigurator } from './SignerConfigurator';
+import { Signer } from './SignerInterface';
+import { PopUpCommunicator } from './transport/PopUpCommunicator';
 import { SignRequestHandlerListener } from './UpdateListenerInterface';
 import { CB_KEYS_URL } from ':core/constants';
 import { standardErrorCodes, standardErrors } from ':core/error';
@@ -12,15 +13,44 @@ interface SignRequestHandlerOptions {
   appLogoUrl?: string | null;
   appChainIds: number[];
   smartWalletOnly: boolean;
+  signer?: Signer; // optional:
   updateListener: SignRequestHandlerListener;
 }
 
 export class SignRequestHandler implements RequestHandler {
-  private popupCommunicator: PopUpCommunicator;
   private updateListener: SignRequestHandlerListener;
+
+  private _signer: Signer | undefined;
   private signerConfigurator: SignerConfigurator;
 
+  private async getSigner(): Promise<Signer> {
+    if (this._signer) return this._signer;
+
+    this._signer = await this.signerConfigurator.selectSigner();
+
+    return this._signer;
+  }
+
   constructor(options: Readonly<SignRequestHandlerOptions>) {
+    if (options.signer) {
+      // use the signer passed by the extension for example...
+      return;
+    }
+
+    /** two scenarios:
+     * 1. first visit:
+     * we don't know which signer type to use.
+     * so we need to open up the popup to ask users to choose from SCW / WL / or maybe extension as an option.
+     * we will store the selection on local storage, when user chose one.
+     *
+     * 2. subsequent visits:
+     * we already know which signer type to use.
+     * so we can initialize the signer right away.
+     *    options:
+     *    a. check the persisted signer type on the handler
+     *
+     * */
+
     this.popupCommunicator = new PopUpCommunicator({
       url: CB_KEYS_URL,
     });

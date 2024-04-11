@@ -1,5 +1,6 @@
 import { LIB_VERSION } from '../../version';
 import { Signer, SignerUpdateListener } from '../SignerInterface';
+import { PopUpCommunicator } from '../transport/PopUpCommunicator';
 import {
   decryptContent,
   encryptContent,
@@ -11,7 +12,6 @@ import { Action, SupportedEthereumMethods, SwitchEthereumChainAction } from './m
 import { SCWResponse } from './message/type/Response';
 import { SCWKeyManager } from './SCWKeyManager';
 import { SCWStateManager } from './SCWStateManager';
-import { PopUpCommunicator } from './transport/PopUpCommunicator';
 import { CB_KEYS_BACKEND_URL } from ':core/constants';
 import { standardErrors } from ':core/error';
 import { AddressString } from ':core/type';
@@ -110,6 +110,8 @@ export class SCWSigner implements Signer {
     this.stateManager.clear();
     await this.keyManager.clear();
   }
+
+  // maybe introduce tryNoninteractiveHandling for non-interactive methods
 
   private tryLocalHandling<T>(request: RequestArguments): T | undefined {
     switch (request.method) {
